@@ -217,15 +217,29 @@ function App() {
 
   const downloadPhoto = async () => {
     if (!exportRef.current) return
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    const previewWindow = isIOS ? window.open('', '_blank') : null
     const canvas = await html2canvas(exportRef.current, {
       backgroundColor: null,
       scale: 2,
       useCORS: true,
     })
-    const link = document.createElement('a')
-    link.href = canvas.toDataURL('image/png')
-    link.download = 'vintage-photobooth.png'
-    link.click()
+    canvas.toBlob((blob) => {
+      if (!blob) return
+      const url = URL.createObjectURL(blob)
+      if (isIOS && previewWindow) {
+        previewWindow.document.write(`<!doctype html><title>Vanilla Booth</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#fff6fc;font-family:sans-serif}img{max-width:100%;height:auto}p{position:fixed;bottom:12px;font-size:12px;color:#171321}</style><img src="${url}" alt="Vanilla Booth photo"><p>Long press the image, then Save to Photos.</p>`)
+        previewWindow.document.close()
+        return
+      }
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'vanilla-booth.png'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    }, 'image/png')
   }
 
   const printPhoto = () => {
