@@ -224,18 +224,7 @@ function App() {
       scale: 2,
       useCORS: true,
     })
-    const dataUrl = canvas.toDataURL('image/png')
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-    if (isIOS) {
-      setExportedImage(dataUrl)
-      return
-    }
-    const link = document.createElement('a')
-    link.href = dataUrl
-    link.download = 'vanilla-booth.png'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
+    setExportedImage(canvas.toDataURL('image/png'))
   }
 
   const printPhoto = () => {
