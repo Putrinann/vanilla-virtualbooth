@@ -1275,3 +1275,17 @@ button:disabled {
 }
 .layout-polaroid2r .frame-microcopy { bottom: 28px !important; }
 .layout-polaroid2r .frame-credit { bottom: 12px !important; }
+
+
+/* export/modal should preserve rounded frame shape */
+.frame-stage {
+  isolation: isolate;
+  clip-path: inset(0 round 1.55rem);
+}
+.export-preview-card {
+  background: transparent !important;
+}
+.export-preview-image {
+  background: transparent !important;
+  border-radius: 1.55rem;
+}

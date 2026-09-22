@@ -366,8 +366,8 @@ function App() {
       </div>
       {exportedImage && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-ink/80 p-4">
-          <div className="max-h-[92vh] w-full max-w-sm rounded-3xl border-4 border-ink bg-white p-3 shadow-[8px_8px_0_#171321]">
-            <img src={exportedImage} alt="Final Vanilla Booth export" className="max-h-[70vh] w-full rounded-2xl object-contain" />
+          <div className="export-preview-card max-h-[92vh] w-full max-w-sm rounded-3xl border-4 border-ink bg-white p-3 shadow-[8px_8px_0_#171321]">
+            <img src={exportedImage} alt="Final Vanilla Booth export" className="export-preview-image max-h-[70vh] w-full object-contain" />
             <p className="mt-2 text-center font-type text-[10px] font-black uppercase tracking-[0.12em] text-ink/70">Long press this final frame to save</p>
             <a className="vintage-button mt-3 w-full" href={exportedImage} download="vanilla-booth.png">Download PNG</a>
             <button className="vintage-button secondary mt-2 w-full" onClick={() => setExportedImage(null)} type="button">Close</button>
