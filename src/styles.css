@@ -1135,3 +1135,143 @@ button:disabled {
 .photo-cell img {
   transform-origin: center;
 }
+
+
+/* drag photo fit */
+.photo-cell {
+  cursor: grab;
+  touch-action: none;
+}
+.photo-cell:active { cursor: grabbing; }
+.photo-cell.active-fit {
+  outline: 3px solid var(--frame-accent, #ff5dab);
+  outline-offset: 2px;
+}
+.photo-cell img {
+  user-select: none;
+  will-change: transform, object-position;
+}
+.fit-hint {
+  margin: 0 0 .45rem;
+  color: rgba(23,19,33,.68);
+  font: 800 .58rem "Space Grotesk", Outfit, sans-serif;
+  letter-spacing: .08em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+.fit-actions {
+  display: grid;
+  grid-template-columns: .7fr 1.4fr .7fr;
+  gap: .35rem;
+  margin-top: .5rem;
+}
+.fit-actions button {
+  min-height: 28px;
+  border: 2px solid rgba(23,19,33,.2);
+  border-radius: .8rem;
+  background: rgba(255,255,255,.86);
+  color: #171321;
+  font: 950 .68rem "Space Grotesk", Outfit, sans-serif;
+}
+.fit-actions button:hover {
+  border-color: #171321;
+  background: #ffdf43;
+}
+
+
+/* keep every photo window landscape 16:9 while allowing draggable crop */
+.photo-grid {
+  align-content: start !important;
+}
+.photo-cell {
+  aspect-ratio: 16 / 9 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+.layout-polaroid2r .photo-grid,
+.layout-strip3 .photo-grid,
+.layout-strip4 .photo-grid,
+.layout-grid6 .photo-grid,
+.layout-grid8 .photo-grid {
+  grid-auto-rows: auto !important;
+}
+.layout-polaroid2r .photo-count-1,
+.layout-strip3 .photo-count-3,
+.layout-strip4 .photo-count-4 {
+  grid-template-rows: none !important;
+}
+.layout-grid6 .photo-count-6,
+.layout-grid8 .photo-count-8 {
+  grid-template-rows: none !important;
+}
+.photo-cell img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.fit-actions {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+.fit-actions button:nth-child(6) {
+  grid-column: span 2;
+}
+
+
+/* Polaroid 2R uses a real portrait polaroid window; multi-photo layouts stay 16:9 */
+.layout-polaroid2r {
+  width: clamp(230px, 26vw, 285px) !important;
+  min-height: 430px !important;
+  padding-bottom: 64px !important;
+}
+.layout-polaroid2r .photo-grid {
+  min-height: 292px !important;
+  align-content: start !important;
+  padding: 58px 20px 112px !important;
+}
+.layout-polaroid2r .photo-cell {
+  aspect-ratio: 3 / 4 !important;
+  width: 100% !important;
+}
+.layout-polaroid2r .photo-cell img {
+  object-fit: cover !important;
+}
+.layout-polaroid2r .frame-subtitle {
+  bottom: 42px !important;
+}
+.layout-polaroid2r .frame-microcopy {
+  bottom: 25px !important;
+}
+.layout-polaroid2r .frame-credit {
+  bottom: 10px !important;
+}
+.layout-strip3 .photo-cell,
+.layout-strip4 .photo-cell,
+.layout-grid6 .photo-cell,
+.layout-grid8 .photo-cell {
+  aspect-ratio: 16 / 9 !important;
+}
+
+
+/* tighter true 2R-style polaroid proportions */
+.layout-polaroid2r {
+  width: clamp(210px, 22vw, 255px) !important;
+  min-height: 382px !important;
+  aspect-ratio: 2 / 3 !important;
+  padding-bottom: 0 !important;
+}
+.layout-polaroid2r .photo-grid {
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 56px 18px 112px !important;
+}
+.layout-polaroid2r .photo-cell {
+  aspect-ratio: 3 / 4 !important;
+  width: 100% !important;
+}
+.layout-polaroid2r .frame-subtitle {
+  bottom: 45px !important;
+  font-size: 1.3rem !important;
+}
+.layout-polaroid2r .frame-microcopy { bottom: 28px !important; }
+.layout-polaroid2r .frame-credit { bottom: 12px !important; }

@@ -126,34 +126,16 @@ function App() {
     setRetakeIndex(null)
   }
 
-  const cropImageToLandscape = (file) =>
+  const readUploadedPhoto = (file) =>
     new Promise((resolve) => {
       const reader = new FileReader()
-      reader.onload = () => {
-        const image = new Image()
-        image.onload = () => {
-          const targetWidth = 1280
-          const targetHeight = 720
-          const sourceRatio = image.width / image.height
-          const targetRatio = targetWidth / targetHeight
-          const sourceWidth = sourceRatio > targetRatio ? image.height * targetRatio : image.width
-          const sourceHeight = sourceRatio > targetRatio ? image.height : image.width / targetRatio
-          const sourceX = (image.width - sourceWidth) / 2
-          const sourceY = (image.height - sourceHeight) / 2
-          const canvas = document.createElement('canvas')
-          canvas.width = targetWidth
-          canvas.height = targetHeight
-          canvas.getContext('2d').drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, targetWidth, targetHeight)
-          resolve(canvas.toDataURL('image/jpeg', 0.92))
-        }
-        image.src = reader.result
-      }
+      reader.onload = () => resolve(reader.result)
       reader.readAsDataURL(file)
     })
 
   const addUploadedPhoto = async (file) => {
     if (!file || (photos.length >= 8 && retakeIndex === null)) return
-    const image = await cropImageToLandscape(file)
+    const image = await readUploadedPhoto(file)
     setPhotos((current) => {
       if (retakeIndex !== null) {
         const next = [...current]
@@ -297,7 +279,7 @@ function App() {
   return (
     <main className="paper-shell relative min-h-screen overflow-hidden px-2 py-2 text-ink sm:px-3">
       <div className="mx-auto flex min-h-[calc(100vh-1rem)] max-w-6xl flex-col gap-5">
-        <Header step={step} timer={timer} setTimer={setTimer} />
+        <Header step={step} timer={timer} setTimer={setTimer} setStep={setStep} />
         {step === 0 && (
           <CaptureStep
             countdown={countdown}
@@ -383,33 +365,23 @@ function App() {
   )
 }
 
-function Header({ step, timer, setTimer }) {
+function Header({ step, timer, setTimer, setStep }) {
   return (
     <header className="vintage-panel mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-2 px-3 py-2">
       <div className="text-center sm:text-left">
-        <h1 className="font-serifDisplay text-2xl font-black tracking-tight text-bubblegum sm:text-4xl">
-          Vanilla Booth
-        </h1>
-        <p className="mt-0.5 text-xs font-black uppercase tracking-[0.18em] text-ink/55">
-          pose, pop, save
-        </p>
+        <h1 className="font-serifDisplay text-2xl font-black tracking-tight text-bubblegum sm:text-4xl">Vanilla Booth</h1>
+        <p className="mt-0.5 text-xs font-black uppercase tracking-[0.18em] text-ink/55">pose, pop, save</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="hidden items-center gap-1 rounded-full border-2 border-ink bg-white/80 px-2 py-1 font-type text-[10px] font-black sm:flex">
-          {steps.map((item, index) => (
-            <span key={item.id} className={item.id === step ? 'font-bold text-bubblegum' : 'text-ink/45'}>
-              {index + 1}. {item.label}
-            </span>
-          ))}
-        </div>
+        {step > 0 && (
+          <button className="vintage-button secondary !min-h-0 !px-4 !py-2" onClick={() => setStep(step === 3 ? 2 : 0)} type="button">Back</button>
+        )}
         {step === 0 && (
           <div className="flex items-center gap-1 rounded-full border-2 border-ink bg-white p-1">
             {timers.map((item) => (
               <button
                 key={item}
-              className={`rounded-full px-2 py-1 font-type text-[10px] transition ${
-                  timer === item ? 'bg-bubblegum text-white shadow-[2px_2px_0_#171321]' : 'text-ink hover:bg-blush'
-                }`}
+                className={`rounded-full px-2 py-1 font-type text-[10px] transition ${timer === item ? 'bg-bubblegum text-white shadow-[2px_2px_0_#171321]' : 'text-ink hover:bg-blush'}`}
                 onClick={() => setTimer(item)}
                 type="button"
               >
@@ -422,7 +394,6 @@ function Header({ step, timer, setTimer }) {
     </header>
   )
 }
-
 function CaptureStep({
   webcamRef,
   countdown,
@@ -718,6 +689,9 @@ function DecorateStep(props) {
         frameBg={frameBg}
         frameAccent={frameAccent}
         photoAdjustments={photoAdjustments}
+        activePhotoAdjust={activePhotoAdjust}
+        setActivePhotoAdjust={setActivePhotoAdjust}
+        updatePhotoAdjustment={updatePhotoAdjustment}
       />
 
       <aside className="vintage-panel space-y-3 p-3">
@@ -749,6 +723,7 @@ function DecorateStep(props) {
         </div>
         {framePhotos.length > 0 && (
           <ControlGroup title="Photo Fit">
+            <p className="fit-hint">Pick a slot, then drag the photo in the frame.</p>
             <div className="fit-picker">
               {framePhotos.map((photo, index) => (
                 <button
@@ -762,10 +737,14 @@ function DecorateStep(props) {
               ))}
             </div>
             {currentAdjustPhoto && (
-              <div className="fit-controls">
-                <label>X <input max="100" min="0" onChange={(event) => updatePhotoAdjustment(currentAdjustPhoto, { x: Number(event.target.value) })} type="range" value={(photoAdjustments[currentAdjustPhoto]?.x ?? 50)} /></label>
-                <label>Y <input max="100" min="0" onChange={(event) => updatePhotoAdjustment(currentAdjustPhoto, { y: Number(event.target.value) })} type="range" value={(photoAdjustments[currentAdjustPhoto]?.y ?? 50)} /></label>
-                <label>Zoom <input max="1.8" min="1" onChange={(event) => updatePhotoAdjustment(currentAdjustPhoto, { scale: Number(event.target.value) })} step="0.05" type="range" value={(photoAdjustments[currentAdjustPhoto]?.scale ?? 1)} /></label>
+              <div className="fit-actions">
+                <button type="button" onClick={() => updatePhotoAdjustment(currentAdjustPhoto, { y: Math.max(0, (photoAdjustments[currentAdjustPhoto]?.y ?? 50) - 8) })}>Up</button>
+                <button type="button" onClick={() => updatePhotoAdjustment(currentAdjustPhoto, { y: Math.min(100, (photoAdjustments[currentAdjustPhoto]?.y ?? 50) + 8) })}>Down</button>
+                <button type="button" onClick={() => updatePhotoAdjustment(currentAdjustPhoto, { x: Math.max(0, (photoAdjustments[currentAdjustPhoto]?.x ?? 50) - 8) })}>Left</button>
+                <button type="button" onClick={() => updatePhotoAdjustment(currentAdjustPhoto, { x: Math.min(100, (photoAdjustments[currentAdjustPhoto]?.x ?? 50) + 8) })}>Right</button>
+                <button type="button" onClick={() => updatePhotoAdjustment(currentAdjustPhoto, { scale: Math.max(1, (photoAdjustments[currentAdjustPhoto]?.scale ?? 1) - 0.1) })}>-</button>
+                <button type="button" onClick={() => updatePhotoAdjustment(currentAdjustPhoto, { x: 50, y: 50, scale: 1 })}>Reset</button>
+                <button type="button" onClick={() => updatePhotoAdjustment(currentAdjustPhoto, { scale: Math.min(1.8, (photoAdjustments[currentAdjustPhoto]?.scale ?? 1) + 0.1) })}>+</button>
               </div>
             )}
           </ControlGroup>
@@ -821,7 +800,7 @@ function ExportStep({ activeFilter, activeTemplate, downloadPhoto, downloadVideo
   )
 }
 
-function FramePreview({ activeFilter, activeTemplate, exportRef, frameMode, layoutCount, photos, stickers, updateSticker, birthdayName, frameBg, frameAccent, photoAdjustments }) {
+function FramePreview({ activeFilter, activeTemplate, exportRef, frameMode, layoutCount, photos, stickers, updateSticker, birthdayName, frameBg, frameAccent, photoAdjustments, activePhotoAdjust, setActivePhotoAdjust, updatePhotoAdjustment }) {
   const safePhotos = photos.length ? photos : [null]
   const visualLayout = getLayoutCount(layoutCount)
   return (
@@ -830,22 +809,16 @@ function FramePreview({ activeFilter, activeTemplate, exportRef, frameMode, layo
         <TemplateOverlay birthdayName={birthdayName} template={activeTemplate} />
         <div className={`photo-grid photo-count-${visualLayout}`}>
           {Array.from({ length: visualLayout }).map((_, index) => (
-            <div key={index} className="photo-cell">
-              {safePhotos[index % safePhotos.length] ? (() => {
-                const photo = safePhotos[index % safePhotos.length]
-                const adjust = photoAdjustments[photo] ?? { x: 50, y: 50, scale: 1 }
-                return (
-                  <img
-                    src={photo}
-                    alt=""
-                    className={`h-full w-full object-cover ${activeFilter.className}`}
-                    style={{ objectPosition: `${adjust.x}% ${adjust.y}%`, transform: `scale(${adjust.scale})` }}
-                  />
-                )
-              })() : (
-                <Sparkles className="text-bubblegum" size={30} />
-              )}
-            </div>
+            <PhotoCell
+              activeFilter={activeFilter}
+              activeIndex={activePhotoAdjust}
+              adjustment={photoAdjustments[safePhotos[index % safePhotos.length]]}
+              index={index}
+              key={index}
+              photo={safePhotos[index % safePhotos.length]}
+              setActivePhotoAdjust={setActivePhotoAdjust}
+              updatePhotoAdjustment={updatePhotoAdjustment}
+            />
           ))}
         </div>
         {stickers.map((item) => (
@@ -854,6 +827,49 @@ function FramePreview({ activeFilter, activeTemplate, exportRef, frameMode, layo
         <div className="frame-credit">created by : putrinann_</div>
       </div>
     </section>
+  )
+}
+
+
+function PhotoCell({ activeFilter, activeIndex, adjustment, index, photo, setActivePhotoAdjust, updatePhotoAdjustment }) {
+  const adjust = adjustment ?? { x: 50, y: 50, scale: 1 }
+  const handlePointerDown = (event) => {
+    if (!photo) return
+    setActivePhotoAdjust(index)
+    const startX = event.clientX
+    const startY = event.clientY
+    const originX = adjust.x
+    const originY = adjust.y
+    event.currentTarget.setPointerCapture(event.pointerId)
+
+    const move = (moveEvent) => {
+      updatePhotoAdjustment(photo, {
+        x: Math.max(0, Math.min(100, originX - (moveEvent.clientX - startX))),
+        y: Math.max(0, Math.min(100, originY - (moveEvent.clientY - startY))),
+      })
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+
+  return (
+    <div className={`photo-cell ${activeIndex === index ? 'active-fit' : ''}`} onPointerDown={handlePointerDown}>
+      {photo ? (
+        <img
+          src={photo}
+          alt=""
+          className={`h-full w-full object-cover ${activeFilter.className}`}
+          draggable="false"
+          style={{ objectPosition: 'center', transform: `translate(${adjust.x - 50}%, ${adjust.y - 50}%) scale(${adjust.scale})` }}
+        />
+      ) : (
+        <Sparkles className="text-bubblegum" size={30} />
+      )}
+    </div>
   )
 }
 
