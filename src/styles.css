@@ -1092,3 +1092,46 @@ button:disabled {
 .frame-copy-lace .frame-title {
   color: var(--frame-accent, #ff5dab) !important;
 }
+
+
+/* photo fit controls */
+.fit-picker {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+.fit-thumb {
+  min-height: 28px;
+  border: 2px solid rgba(23,19,33,.18);
+  border-radius: .8rem;
+  background: rgba(255,255,255,.82);
+  color: #171321;
+  font: 900 .68rem "Space Grotesk", Outfit, sans-serif;
+}
+.fit-thumb.active {
+  border-color: #171321;
+  background: #ffdf43;
+  box-shadow: 2px 2px 0 #171321;
+}
+.fit-controls {
+  display: grid;
+  gap: .35rem;
+  margin-top: .55rem;
+}
+.fit-controls label {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: .4rem;
+  color: #171321;
+  font: 900 .62rem "Space Grotesk", Outfit, sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.fit-controls input[type="range"] {
+  accent-color: #ff5dab;
+  width: 100%;
+}
+.photo-cell img {
+  transform-origin: center;
+}

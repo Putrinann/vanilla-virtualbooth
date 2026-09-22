@@ -93,6 +93,8 @@ function App() {
   const [birthdayName, setBirthdayName] = useState('bestie')
   const [frameBg, setFrameBg] = useState('#fff6fc')
   const [frameAccent, setFrameAccent] = useState('#ff5dab')
+  const [photoAdjustments, setPhotoAdjustments] = useState({})
+  const [activePhotoAdjust, setActivePhotoAdjust] = useState(0)
 
   const selectedPhotos = useMemo(
     () => selectedIds.map((index) => photos[index]).filter(Boolean),
@@ -102,6 +104,7 @@ function App() {
   const activeTemplate = templates.find((item) => item.id === templateId) ?? templates[0]
   const sourcePhotos = selectedPhotos.length ? selectedPhotos : photos
   const framePhotos = sourcePhotos.slice(0, getLayoutCount(layoutCount))
+  const currentAdjustPhoto = framePhotos[activePhotoAdjust] ?? framePhotos[0]
 
   const capturePhoto = () => {
     if (photos.length >= 8 && retakeIndex === null) return
@@ -214,6 +217,14 @@ function App() {
         icon: item.icon,
       },
     ])
+  }
+
+  const updatePhotoAdjustment = (photo, patch) => {
+    if (!photo) return
+    setPhotoAdjustments((current) => ({
+      ...current,
+      [photo]: { x: 50, y: 50, scale: 1, ...(current[photo] ?? {}), ...patch },
+    }))
   }
 
   const updateSticker = (id, info) => {
@@ -340,6 +351,11 @@ function App() {
             setFrameBg={setFrameBg}
             frameAccent={frameAccent}
             setFrameAccent={setFrameAccent}
+            photoAdjustments={photoAdjustments}
+            activePhotoAdjust={activePhotoAdjust}
+            setActivePhotoAdjust={setActivePhotoAdjust}
+            currentAdjustPhoto={currentAdjustPhoto}
+            updatePhotoAdjustment={updatePhotoAdjustment}
           />
         )}
         {step === 3 && (
@@ -617,6 +633,11 @@ function DecorateStep(props) {
     setFrameBg,
     frameAccent,
     setFrameAccent,
+    photoAdjustments,
+    activePhotoAdjust,
+    setActivePhotoAdjust,
+    currentAdjustPhoto,
+    updatePhotoAdjustment,
   } = props
   const availableLayouts = layoutOptions.filter((item) => getLayoutCount(item) <= Math.max(framePhotos.length, selectedPhotos.length, 1))
 
@@ -696,6 +717,7 @@ function DecorateStep(props) {
         birthdayName={birthdayName}
         frameBg={frameBg}
         frameAccent={frameAccent}
+        photoAdjustments={photoAdjustments}
       />
 
       <aside className="vintage-panel space-y-3 p-3">
@@ -725,6 +747,29 @@ function DecorateStep(props) {
             Print
           </button>
         </div>
+        {framePhotos.length > 0 && (
+          <ControlGroup title="Photo Fit">
+            <div className="fit-picker">
+              {framePhotos.map((photo, index) => (
+                <button
+                  className={`fit-thumb ${activePhotoAdjust === index ? 'active' : ''}`}
+                  key={`fit-${index}`}
+                  onClick={() => setActivePhotoAdjust(index)}
+                  type="button"
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+            {currentAdjustPhoto && (
+              <div className="fit-controls">
+                <label>X <input max="100" min="0" onChange={(event) => updatePhotoAdjustment(currentAdjustPhoto, { x: Number(event.target.value) })} type="range" value={(photoAdjustments[currentAdjustPhoto]?.x ?? 50)} /></label>
+                <label>Y <input max="100" min="0" onChange={(event) => updatePhotoAdjustment(currentAdjustPhoto, { y: Number(event.target.value) })} type="range" value={(photoAdjustments[currentAdjustPhoto]?.y ?? 50)} /></label>
+                <label>Zoom <input max="1.8" min="1" onChange={(event) => updatePhotoAdjustment(currentAdjustPhoto, { scale: Number(event.target.value) })} step="0.05" type="range" value={(photoAdjustments[currentAdjustPhoto]?.scale ?? 1)} /></label>
+              </div>
+            )}
+          </ControlGroup>
+        )}
         <ControlGroup title="Frame Color">
           <div className="color-palette">
             {framePalette.map((color) => (
@@ -776,7 +821,7 @@ function ExportStep({ activeFilter, activeTemplate, downloadPhoto, downloadVideo
   )
 }
 
-function FramePreview({ activeFilter, activeTemplate, exportRef, frameMode, layoutCount, photos, stickers, updateSticker, birthdayName, frameBg, frameAccent }) {
+function FramePreview({ activeFilter, activeTemplate, exportRef, frameMode, layoutCount, photos, stickers, updateSticker, birthdayName, frameBg, frameAccent, photoAdjustments }) {
   const safePhotos = photos.length ? photos : [null]
   const visualLayout = getLayoutCount(layoutCount)
   return (
@@ -786,9 +831,18 @@ function FramePreview({ activeFilter, activeTemplate, exportRef, frameMode, layo
         <div className={`photo-grid photo-count-${visualLayout}`}>
           {Array.from({ length: visualLayout }).map((_, index) => (
             <div key={index} className="photo-cell">
-              {safePhotos[index % safePhotos.length] ? (
-                <img src={safePhotos[index % safePhotos.length]} alt="" className={`h-full w-full object-cover ${activeFilter.className}`} />
-              ) : (
+              {safePhotos[index % safePhotos.length] ? (() => {
+                const photo = safePhotos[index % safePhotos.length]
+                const adjust = photoAdjustments[photo] ?? { x: 50, y: 50, scale: 1 }
+                return (
+                  <img
+                    src={photo}
+                    alt=""
+                    className={`h-full w-full object-cover ${activeFilter.className}`}
+                    style={{ objectPosition: `${adjust.x}% ${adjust.y}%`, transform: `scale(${adjust.scale})` }}
+                  />
+                )
+              })() : (
                 <Sparkles className="text-bubblegum" size={30} />
               )}
             </div>
