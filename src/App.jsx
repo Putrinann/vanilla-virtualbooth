@@ -31,6 +31,8 @@ const timers = [0, 3, 5, 10]
 const layoutOptions = ['polaroid2r', 'strip3', 'strip4', 'grid6', 'grid8']
 const getLayoutCount = (layout) => ({ polaroid2r: 1, strip3: 3, strip4: 4, grid6: 6, grid8: 8 }[layout] ?? 1)
 
+const framePalette = ['#ff5dab', '#ffdf43', '#5be1bf', '#79d9ff', '#9b7cff', '#ff8a3d', '#ef4444', '#22c55e', '#2563eb', '#111827', '#ffffff', '#8b5e34']
+
 const filters = [
   { id: 'none', label: 'Original', className: 'filter-none' },
   { id: 'grayscale', label: 'Grayscale', className: 'grayscale contrast-105' },
@@ -90,6 +92,7 @@ function App() {
   const [cameraOn, setCameraOn] = useState(true)
   const [birthdayName, setBirthdayName] = useState('bestie')
   const [frameBg, setFrameBg] = useState('#fff6fc')
+  const [frameAccent, setFrameAccent] = useState('#ff5dab')
 
   const selectedPhotos = useMemo(
     () => selectedIds.map((index) => photos[index]).filter(Boolean),
@@ -120,27 +123,48 @@ function App() {
     setRetakeIndex(null)
   }
 
-  const addUploadedPhoto = (file) => {
-    if (!file || (photos.length >= 8 && retakeIndex === null)) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const image = reader.result
-      setPhotos((current) => {
-        if (retakeIndex !== null) {
-          const next = [...current]
-          next[retakeIndex] = image
-          return next
+  const cropImageToLandscape = (file) =>
+    new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const image = new Image()
+        image.onload = () => {
+          const targetWidth = 1280
+          const targetHeight = 720
+          const sourceRatio = image.width / image.height
+          const targetRatio = targetWidth / targetHeight
+          const sourceWidth = sourceRatio > targetRatio ? image.height * targetRatio : image.width
+          const sourceHeight = sourceRatio > targetRatio ? image.height : image.width / targetRatio
+          const sourceX = (image.width - sourceWidth) / 2
+          const sourceY = (image.height - sourceHeight) / 2
+          const canvas = document.createElement('canvas')
+          canvas.width = targetWidth
+          canvas.height = targetHeight
+          canvas.getContext('2d').drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, targetWidth, targetHeight)
+          resolve(canvas.toDataURL('image/jpeg', 0.92))
         }
-        return [...current, image]
-      })
-      setSelectedIds((current) => {
-        if (retakeIndex !== null) return current.includes(retakeIndex) ? current : [...current, retakeIndex]
-        const nextIndex = photos.length
-        return current.includes(nextIndex) ? current : [...current, nextIndex]
-      })
-      setRetakeIndex(null)
-    }
-    reader.readAsDataURL(file)
+        image.src = reader.result
+      }
+      reader.readAsDataURL(file)
+    })
+
+  const addUploadedPhoto = async (file) => {
+    if (!file || (photos.length >= 8 && retakeIndex === null)) return
+    const image = await cropImageToLandscape(file)
+    setPhotos((current) => {
+      if (retakeIndex !== null) {
+        const next = [...current]
+        next[retakeIndex] = image
+        return next
+      }
+      return [...current, image]
+    })
+    setSelectedIds((current) => {
+      if (retakeIndex !== null) return current.includes(retakeIndex) ? current : [...current, retakeIndex]
+      const nextIndex = photos.length
+      return current.includes(nextIndex) ? current : [...current, nextIndex]
+    })
+    setRetakeIndex(null)
   }
 
   const startCapture = () => {
@@ -314,6 +338,8 @@ function App() {
             setBirthdayName={setBirthdayName}
             frameBg={frameBg}
             setFrameBg={setFrameBg}
+            frameAccent={frameAccent}
+            setFrameAccent={setFrameAccent}
           />
         )}
         {step === 3 && (
@@ -589,6 +615,8 @@ function DecorateStep(props) {
     setBirthdayName,
     frameBg,
     setFrameBg,
+    frameAccent,
+    setFrameAccent,
   } = props
   const availableLayouts = layoutOptions.filter((item) => getLayoutCount(item) <= Math.max(framePhotos.length, selectedPhotos.length, 1))
 
@@ -667,6 +695,7 @@ function DecorateStep(props) {
         updateSticker={updateSticker}
         birthdayName={birthdayName}
         frameBg={frameBg}
+        frameAccent={frameAccent}
       />
 
       <aside className="vintage-panel space-y-3 p-3">
@@ -696,6 +725,20 @@ function DecorateStep(props) {
             Print
           </button>
         </div>
+        <ControlGroup title="Frame Color">
+          <div className="color-palette">
+            {framePalette.map((color) => (
+              <button
+                aria-label={color}
+                className={`color-dot ${frameAccent === color ? 'active' : ''}`}
+                key={color}
+                onClick={() => setFrameAccent(color)}
+                style={{ background: color }}
+                type="button"
+              />
+            ))}
+          </div>
+        </ControlGroup>
       </aside>
     </section>
   )
@@ -733,12 +776,12 @@ function ExportStep({ activeFilter, activeTemplate, downloadPhoto, downloadVideo
   )
 }
 
-function FramePreview({ activeFilter, activeTemplate, exportRef, frameMode, layoutCount, photos, stickers, updateSticker, birthdayName, frameBg }) {
+function FramePreview({ activeFilter, activeTemplate, exportRef, frameMode, layoutCount, photos, stickers, updateSticker, birthdayName, frameBg, frameAccent }) {
   const safePhotos = photos.length ? photos : [null]
   const visualLayout = getLayoutCount(layoutCount)
   return (
     <section className="vintage-panel grid min-h-[430px] place-items-center overflow-hidden px-5 py-7">
-      <div ref={exportRef} className={`frame-stage template-${activeTemplate.id} mode-${frameMode} layout-${layoutCount}`} style={{ '--classic-bg': frameBg }}>
+      <div ref={exportRef} className={`frame-stage template-${activeTemplate.id} mode-${frameMode} layout-${layoutCount}`} style={{ '--classic-bg': frameBg, '--frame-accent': frameAccent }}>
         <TemplateOverlay birthdayName={birthdayName} template={activeTemplate} />
         <div className={`photo-grid photo-count-${visualLayout}`}>
           {Array.from({ length: visualLayout }).map((_, index) => (

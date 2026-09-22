@@ -1058,3 +1058,37 @@ button:disabled {
   background: radial-gradient(circle, #8a8a8f 0 6px, transparent 7px) 0 0 / 28px 44px repeat-y !important;
   opacity: 1 !important;
 }
+
+
+/* frame color palette */
+.color-palette {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+.frame-stage {
+  border-color: var(--frame-accent, #ff5dab);
+}
+.frame-stage .photo-cell {
+  box-shadow: 2px 2px 0 var(--frame-accent, #171321);
+}
+.frame-title,
+.frame-subtitle {
+  text-decoration-color: var(--frame-accent, currentColor);
+}
+.template-polaroid,
+.template-birthday,
+.template-bubble,
+.template-cake,
+.template-candy,
+.template-dream,
+.template-lace {
+  border-color: var(--frame-accent, #ff5dab) !important;
+}
+.frame-copy-polaroid .frame-title,
+.frame-copy-cake .frame-title,
+.frame-copy-candy .frame-title,
+.frame-copy-dream .frame-title,
+.frame-copy-lace .frame-title {
+  color: var(--frame-accent, #ff5dab) !important;
+}
