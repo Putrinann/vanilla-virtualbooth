@@ -1,7 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react'
 import Webcam from 'react-webcam'
 import html2canvas from 'html2canvas'
-import { motion } from 'framer-motion'
 import {
   Camera,
   Candy,
@@ -29,7 +28,8 @@ const steps = [
   { id: 3, label: 'Export' },
 ]
 const timers = [0, 3, 5, 10]
-const layoutOptions = [1, 2, 3, 4, 6, 8]
+const layoutOptions = ['polaroid2r', 'strip3', 'strip4', 'grid6', 'grid8']
+const getLayoutCount = (layout) => ({ polaroid2r: 1, strip3: 3, strip4: 4, grid6: 6, grid8: 8 }[layout] ?? 1)
 
 const filters = [
   { id: 'none', label: 'Original', className: 'filter-none' },
@@ -40,7 +40,6 @@ const filters = [
 
 const templates = [
   { id: 'polaroid', label: 'Classic Polaroid', icon: Camera, mode: 'css' },
-  { id: 'strip', label: '4-Frame Strip', icon: Film, mode: 'css' },
   { id: 'birthday', label: 'Birthday Edition', icon: IceCreamBowl, mode: 'css' },
   { id: 'newspaper', label: 'Newspaper Frame', icon: Stamp, mode: 'css' },
   { id: 'film', label: 'Retro Film Frame', icon: Film, mode: 'css' },
@@ -81,7 +80,7 @@ function App() {
   const [countdown, setCountdown] = useState(null)
   const [photos, setPhotos] = useState([])
   const [selectedIds, setSelectedIds] = useState([])
-  const [layoutCount, setLayoutCount] = useState(4)
+  const [layoutCount, setLayoutCount] = useState('polaroid2r')
   const [templateId, setTemplateId] = useState('polaroid')
   const [frameMode, setFrameMode] = useState('light')
   const [filterId, setFilterId] = useState('none')
@@ -89,6 +88,8 @@ function App() {
   const [isExportingVideo, setIsExportingVideo] = useState(false)
   const [retakeIndex, setRetakeIndex] = useState(null)
   const [cameraOn, setCameraOn] = useState(true)
+  const [birthdayName, setBirthdayName] = useState('bestie')
+  const [frameBg, setFrameBg] = useState('#fff6fc')
 
   const selectedPhotos = useMemo(
     () => selectedIds.map((index) => photos[index]).filter(Boolean),
@@ -96,7 +97,8 @@ function App() {
   )
   const activeFilter = filters.find((item) => item.id === filterId) ?? filters[0]
   const activeTemplate = templates.find((item) => item.id === templateId) ?? templates[0]
-  const framePhotos = selectedPhotos.slice(0, layoutCount)
+  const sourcePhotos = selectedPhotos.length ? selectedPhotos : photos
+  const framePhotos = sourcePhotos.slice(0, getLayoutCount(layoutCount))
 
   const capturePhoto = () => {
     if (photos.length >= 8 && retakeIndex === null) return
@@ -171,8 +173,7 @@ function App() {
 
   const goDecorate = (ids = selectedIds) => {
     const count = Math.min(ids.length || 1, 8)
-    const closest = layoutOptions.find((option) => option >= count) ?? 8
-    setLayoutCount(closest)
+    setLayoutCount(count <= 1 ? 'polaroid2r' : count <= 3 ? 'strip3' : count <= 4 ? 'strip4' : count <= 6 ? 'grid6' : 'grid8')
     setStep(2)
   }
 
@@ -208,6 +209,10 @@ function App() {
     link.href = canvas.toDataURL('image/png')
     link.download = 'vintage-photobooth.png'
     link.click()
+  }
+
+  const printPhoto = () => {
+    window.print()
   }
 
   const downloadVideo = async () => {
@@ -289,6 +294,8 @@ function App() {
             activeTemplate={activeTemplate}
             addSticker={addSticker}
             exportRef={exportRef}
+            downloadPhoto={downloadPhoto}
+            printPhoto={printPhoto}
             filterId={filterId}
             filters={filters}
             framePhotos={framePhotos}
@@ -303,6 +310,10 @@ function App() {
             stickers={stickers}
             templates={templates}
             updateSticker={updateSticker}
+            birthdayName={birthdayName}
+            setBirthdayName={setBirthdayName}
+            frameBg={frameBg}
+            setFrameBg={setFrameBg}
           />
         )}
         {step === 3 && (
@@ -334,8 +345,7 @@ function Header({ step, timer, setTimer }) {
   return (
     <header className="vintage-panel mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-2 px-3 py-2">
       <div className="text-center sm:text-left">
-        <p className="font-type text-[10px] font-black uppercase tracking-[0.24em] text-bubblegum">Virtual Photobooth</p>
-        <h1 className="font-serifDisplay text-2xl font-black tracking-tight text-ink sm:text-4xl">
+        <h1 className="font-serifDisplay text-2xl font-black tracking-tight text-bubblegum sm:text-4xl">
           Vanilla Booth
         </h1>
         <p className="mt-0.5 text-xs font-black uppercase tracking-[0.18em] text-ink/55">
@@ -558,12 +568,14 @@ function DecorateStep(props) {
     activeFilter,
     activeTemplate,
     addSticker,
+    downloadPhoto,
     exportRef,
     filterId,
     filters,
     framePhotos,
     frameMode,
     layoutCount,
+    printPhoto,
     selectedPhotos,
     setFilterId,
     setFrameMode,
@@ -573,13 +585,16 @@ function DecorateStep(props) {
     stickers,
     templates,
     updateSticker,
+    birthdayName,
+    setBirthdayName,
+    frameBg,
+    setFrameBg,
   } = props
-  const layouts = layoutOptions.filter((item) => item <= selectedPhotos.length)
-  const availableLayouts = layouts.length ? layouts : [selectedPhotos.length || 1]
+  const availableLayouts = layoutOptions.filter((item) => getLayoutCount(item) <= Math.max(framePhotos.length, selectedPhotos.length, 1))
 
   return (
     <section className="grid flex-1 gap-2 lg:grid-cols-[210px_minmax(0,1fr)_210px]">
-      <aside className="vintage-panel space-y-3 p-2">
+      <aside className="vintage-panel space-y-3 p-3">
         <ControlGroup title="Frame Mode">
           <div className="grid grid-cols-2 gap-2">
             {['light', 'dark'].map((mode) => (
@@ -595,14 +610,41 @@ function DecorateStep(props) {
           </div>
         </ControlGroup>
         <ControlGroup title="Grid Layout">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {availableLayouts.map((count) => (
               <button key={count} className={`mini-button ${layoutCount === count ? 'active' : ''}`} onClick={() => setLayoutCount(count)} type="button">
-                {count}
+                {{ polaroid2r: 'Polaroid 2R', strip3: 'Strip 3', strip4: 'Strip 4', grid6: '4R 6', grid8: '4R 8' }[count]}
               </button>
             ))}
           </div>
         </ControlGroup>
+        {activeTemplate.id === 'birthday' && (
+          <ControlGroup title="Birthday Name">
+            <input
+              className="cute-input"
+              maxLength={18}
+              onChange={(event) => setBirthdayName(event.target.value)}
+              placeholder="Type name"
+              value={birthdayName}
+            />
+          </ControlGroup>
+        )}
+        {activeTemplate.id === 'polaroid' && (
+          <ControlGroup title="Classic Color">
+            <div className="grid grid-cols-5 gap-2">
+              {['#fff6fc', '#fff7c8', '#eafff8', '#eaf5ff', '#efe7ff'].map((color) => (
+                <button
+                  aria-label={color}
+                  className={`color-dot ${frameBg === color ? 'active' : ''}`}
+                  key={color}
+                  onClick={() => setFrameBg(color)}
+                  style={{ background: color }}
+                  type="button"
+                />
+              ))}
+            </div>
+          </ControlGroup>
+        )}
         <ControlGroup title="Templates">
           <div className="grid gap-2">
             {templates.map((item) => (
@@ -623,9 +665,11 @@ function DecorateStep(props) {
         photos={framePhotos}
         stickers={stickers}
         updateSticker={updateSticker}
+        birthdayName={birthdayName}
+        frameBg={frameBg}
       />
 
-      <aside className="vintage-panel space-y-3 p-2">
+      <aside className="vintage-panel space-y-3 p-3">
         <ControlGroup title="Filters">
           <div className="grid grid-cols-2 gap-2">
             {filters.map((item) => (
@@ -644,9 +688,14 @@ function DecorateStep(props) {
             ))}
           </div>
         </ControlGroup>
-        <button className="vintage-button w-full" onClick={() => setStep(3)} type="button">
-          Continue Export
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button className="vintage-button w-full" onClick={downloadPhoto} type="button">
+            Download
+          </button>
+          <button className="vintage-button secondary w-full" onClick={printPhoto} type="button">
+            Print
+          </button>
+        </div>
       </aside>
     </section>
   )
@@ -684,14 +733,15 @@ function ExportStep({ activeFilter, activeTemplate, downloadPhoto, downloadVideo
   )
 }
 
-function FramePreview({ activeFilter, activeTemplate, exportRef, frameMode, layoutCount, photos, stickers, updateSticker }) {
+function FramePreview({ activeFilter, activeTemplate, exportRef, frameMode, layoutCount, photos, stickers, updateSticker, birthdayName, frameBg }) {
   const safePhotos = photos.length ? photos : [null]
+  const visualLayout = getLayoutCount(layoutCount)
   return (
-    <section className="vintage-panel grid min-h-[430px] place-items-center overflow-hidden p-2">
-      <div ref={exportRef} className={`frame-stage template-${activeTemplate.id} mode-${frameMode}`}>
-        <TemplateOverlay template={activeTemplate} />
-        <div className={`photo-grid photo-count-${layoutCount}`}>
-          {Array.from({ length: layoutCount }).map((_, index) => (
+    <section className="vintage-panel grid min-h-[430px] place-items-center overflow-hidden px-5 py-7">
+      <div ref={exportRef} className={`frame-stage template-${activeTemplate.id} mode-${frameMode} layout-${layoutCount}`} style={{ '--classic-bg': frameBg }}>
+        <TemplateOverlay birthdayName={birthdayName} template={activeTemplate} />
+        <div className={`photo-grid photo-count-${visualLayout}`}>
+          {Array.from({ length: visualLayout }).map((_, index) => (
             <div key={index} className="photo-cell">
               {safePhotos[index % safePhotos.length] ? (
                 <img src={safePhotos[index % safePhotos.length]} alt="" className={`h-full w-full object-cover ${activeFilter.className}`} />
@@ -704,37 +754,86 @@ function FramePreview({ activeFilter, activeTemplate, exportRef, frameMode, layo
         {stickers.map((item) => (
           <DraggableSticker key={item.id} sticker={item} updateSticker={updateSticker} />
         ))}
+        <div className="frame-credit">created by : putrinann_</div>
       </div>
     </section>
   )
 }
 
-function TemplateOverlay({ template }) {
+function TemplateOverlay({ template, birthdayName }) {
   if (template.id === 'newspaper') {
     return (
-      <div className="pointer-events-none absolute inset-0 z-10 p-5 font-type text-ink">
-        <p className="border-b-2 border-ink text-center text-2xl font-black uppercase tracking-widest">Daily Booth</p>
-        <p className="mt-2 text-center text-xs uppercase">Front-page memories, freshly developed</p>
+      <div className="pointer-events-none absolute inset-0 z-10 newspaper-overlay text-ink">
+        <div className="news-kicker">Special Edition</div>
+        <div className="news-title">Photobooth News</div>
+        <div className="news-rule" />
+        <div className="news-side news-side-top">Moments that turn into memories</div>
+        <div className="news-side news-side-bottom">A collection of today</div>
+        <div className="news-caption">
+          <b>Youth of today, memories that last forever</b>
+          <span>Printed with love and tiny sparks.</span>
+        </div>
       </div>
     )
   }
-  if (template.id === 'aurora') return <div className="pointer-events-none absolute inset-0 z-10 aurora-overlay" />
-  if (template.id === 'lace') return <div className="pointer-events-none absolute inset-0 z-10 lace-overlay" />
-  return null
+
+  const copy = {
+    polaroid: ['CLASSIC', 'vanilla archive', 'SOFT SAVE', 'one tiny moment, softly saved'],
+    birthday: ['HAPPY BIRTHDAY', birthdayName || 'bestie', 'NEXT LEVEL UNLOCKED', 'may you be surrounded by good things'],
+    film: ['RETRO ROLL', 'frame no. 08', 'ON FILM', 'freshly developed in the booth'],
+    bubble: ['BUBBLE', 'light frame', 'FLOAT ON', 'floating little memories'],
+    aurora: ['AURORA', 'night glow', 'SOFT LIGHT', 'northern lights in tiny frames'],
+    paper: ['WORN PAPER', 'found note', 'KEEP THIS', 'creased, taped, and kept'],
+    wood: ['RUSTIC WOOD', 'warm reel', 'WARM DAYS', 'lit like an old fair booth'],
+    lace: ['LACE DIARY', 'delicate edition', 'PURE CHARM', 'soft charm for sweet frames'],
+    cake: ['CAKE POP', 'sugar roll', 'SWEET LIFE', 'frosted snapshots forever'],
+    darkpop: ['MIDNIGHT POP', 'after dark', 'ICON MODE', 'bold little booth energy'],
+    candy: ['CANDY SHOP', 'sweet issue', 'SUGAR RUSH', 'color, sugar, sparkle'],
+    dream: ['DREAM CLOUD', 'soft sky', 'STAY SOFT', 'a little blur of magic'],
+  }[template.id] ?? ['VANILLA', 'booth', 'pose, pop, save']
+  return (
+    <div className={`pointer-events-none absolute inset-0 z-10 frame-copy frame-copy-${template.id}`}>
+      <div className="frame-eyebrow">{copy[1]}</div>
+      <div className="frame-title">{copy[0]}</div>
+      <div className="frame-subtitle">{copy[2]}</div>
+      <div className="frame-microcopy">{copy[3]}</div>
+    </div>
+  )
 }
 
 function DraggableSticker({ sticker, updateSticker }) {
   const Icon = sticker.icon
+  const handlePointerDown = (event) => {
+    const startX = event.clientX
+    const startY = event.clientY
+    const originX = sticker.x
+    const originY = sticker.y
+    event.currentTarget.setPointerCapture(event.pointerId)
+
+    const move = (moveEvent) => {
+      updateSticker(sticker.id, {
+        x: originX + moveEvent.clientX - startX,
+        y: originY + moveEvent.clientY - startY,
+      })
+    }
+
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+
   return (
-    <motion.div
-      drag
-      dragMomentum={false}
-      className="absolute z-20 grid cursor-grab place-items-center rounded-full border-2 border-ink bg-white/75 p-1"
-      onDragEnd={(_, info) => updateSticker(sticker.id, { x: sticker.x + info.offset.x, y: sticker.y + info.offset.y })}
-      style={{ x: sticker.x, y: sticker.y, color: sticker.color }}
+    <div
+      className="absolute z-20 grid cursor-grab touch-none select-none place-items-center p-0 active:cursor-grabbing"
+      onPointerDown={handlePointerDown}
+      style={{ left: sticker.x, top: sticker.y, color: sticker.color }}
     >
       <Icon size={sticker.size} />
-    </motion.div>
+    </div>
   )
 }
 
@@ -748,3 +847,5 @@ function ControlGroup({ title, children }) {
 }
 
 export default App
+
+
